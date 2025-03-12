@@ -3,6 +3,7 @@ const express = require('express');
 const { MongoClient } = require('mongodb');
 const app = express();
 const cors = require('cors');
+const axios = require('axios');
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
@@ -26,6 +27,22 @@ connectToDB();
 const db = client.db('preferencesDB');
 const collection = db.collection('userPreferences');
 
+async function checkUser(email) {
+  try {
+    const response = await axios.post(`http://localhost:3456/api/checkUser`, {
+      email,
+    });
+    console.log(`User check for ${email}:`, response.data.message);
+    if (response.data.message === 'User exists') {
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`Error checking user ${email}:`, error.response.data.message);
+    return false;
+  }
+}
+
 app.get('/api/preferences/:id', async (req, res) => {
   const userID = req.params.id;
 
@@ -37,10 +54,12 @@ app.get('/api/preferences/:id', async (req, res) => {
     let user = await collection.findOne({ _id: userID });
 
     if (!user) {
-      // check user exists from auth service TODO
-      //   if (userDoesNotExist) {
-      //     return res.status(404).json({ error: 'User not found' });
-      //   }
+      //   check user exists from auth service TODO
+      let goodUser = await checkUser(userID);
+
+      if (!goodUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
 
       await collection.insertOne({ _id: userID });
       user = await collection.findOne({ _id: userID });
@@ -61,15 +80,17 @@ app.put('/api/preferences/:id', async (req, res) => {
     return res.status(400).json({ error: 'Missing userID' });
   }
 
+  let goodUser = await checkUser(userID);
+  if (!goodUser) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
   if (!preferences) {
     return res.status(400).json({ error: 'Missing preferences' });
   }
 
   try {
-    await collection.updateOne(
-      { _id: userID },
-      { $set: { preferences: preferences } }
-    );
+    await collection.updateOne({ _id: userID }, { $set: preferences });
     const user = await collection.findOne({ _id: userID });
 
     res.json({ data: user });
