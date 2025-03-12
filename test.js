@@ -9,10 +9,27 @@ async function getUserPreferences(id) {
       `http://localhost:${PORT}/api/preferences/${id}`
     );
 
-    console.log('User preferences retrieved:', response.data);
+    console.log('User preferences retrieved');
+    let preferencesData = response.data.data;
+    printPreferences(preferencesData);
   } catch (error) {
     console.error('Error during get:', error.response.data.error);
   }
+}
+
+function printPreferences(preferences) {
+  console.log('User Preferences printed: ', preferences);
+  const age = preferences.age || 'no age';
+  const sex = preferences.sex || 'no sex';
+  const breed = preferences.breed || 'no breed';
+  const color = preferences.color || 'no color';
+  const radius = preferences.radius || 'no radius';
+
+  console.log(age);
+  console.log(sex);
+  console.log(breed);
+  console.log(color);
+  console.log(radius);
 }
 
 async function updateUserPreferences(id, preferences) {
@@ -27,16 +44,26 @@ async function updateUserPreferences(id, preferences) {
   }
 }
 
-const userID = 'test';
+const badUserID = 'baduser@example.com';
+const goodUserID = 'test@example.com';
 const preferences = {
   color: 'Black',
   sex: 'Male',
   age: '6',
 };
 
+const lessPreferences = {
+  color: 'White',
+};
+
 async function main(userID, preferences) {
   await getUserPreferences(userID);
   await updateUserPreferences(userID, preferences);
+  await updateUserPreferences(userID, lessPreferences);
+  // bad requests
+  await getUserPreferences(badUserID);
+  await updateUserPreferences(badUserID, preferences);
+  //   await updateUserPreferences(userID, null);
 }
 
-main(userID, preferences);
+main(goodUserID, preferences);
