@@ -27,6 +27,38 @@ connectToDB();
 const db = client.db('preferencesDB');
 const collection = db.collection('userPreferences');
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getCoordinates(city, state) {
+  console.log('Geocoding:', city, state);
+  await wait(2000); // rate limit the geocoding API
+
+  try {
+    const response = await axios.get(
+      'https://nominatim.openstreetmap.org/search',
+      {
+        params: { q: `${city}, ${state}`, format: 'json', limit: 1 },
+        headers: { 'User-Agent': 'CatCall' },
+      }
+    );
+
+    if (response.data.length > 0) {
+      const location = response.data[0];
+      return {
+        latitude: parseFloat(location.lat),
+        longitude: parseFloat(location.lon),
+      };
+    } else {
+      throw new Error('Location not found');
+    }
+  } catch (error) {
+    console.error('Geocoding error:', error.message);
+    return null; // Handle missing location gracefully
+  }
+}
+
 async function checkUser(email) {
   try {
     const response = await axios.post(`http://localhost:3456/api/checkUser`, {
@@ -65,7 +97,7 @@ app.get('/api/preferences/:id', async (req, res) => {
       user = await collection.findOne({ _id: userID });
     }
 
-    res.json({ data: user });
+    res.json(user);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Error getting favorites' });
@@ -75,6 +107,8 @@ app.get('/api/preferences/:id', async (req, res) => {
 app.put('/api/preferences/:id', async (req, res) => {
   const userID = req.params.id;
   const preferences = req.body;
+
+  console.log(req.body);
 
   if (!userID) {
     return res.status(400).json({ error: 'Missing userID' });
@@ -90,10 +124,24 @@ app.put('/api/preferences/:id', async (req, res) => {
   }
 
   try {
-    await collection.updateOne({ _id: userID }, { $set: preferences });
-    const user = await collection.findOne({ _id: userID });
+    let user = await collection.findOne({ _id: userID });
+    if (
+      preferences.city &&
+      preferences.state &&
+      (user.city !== preferences.city || user.state !== preferences.state)
+    ) {
+      const coordinates = await getCoordinates(
+        preferences.city,
+        preferences.state
+      );
+      if (!coordinates) {
+        return res.status(400).json({ error: 'Invalid location' });
+      }
+      preferences.location = coordinates;
+    }
 
-    res.json({ data: user });
+    await collection.updateOne({ _id: userID }, { $set: preferences });
+    res.json({ message: 'Preferences updated' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Error updating favorites' });

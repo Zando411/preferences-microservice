@@ -45,21 +45,27 @@ async function updateUserPreferences(id, preferences) {
 }
 
 const badUserID = 'baduser@example.com';
-const goodUserID = 'test@example.com';
+const goodUserID = 'zando@example.com';
 const preferences = {
   color: 'Black',
-  sex: 'Male',
-  age: '6',
+  sex: null,
+  age: {
+    minAge: 2,
+    maxAge: 5,
+  },
+  city: 'Corvallis',
+  state: 'Oregon',
+  radius: 100,
 };
 
-const lessPreferences = {
-  color: 'White',
-};
+// const lessPreferences = {
+//   color: 'White',
+// };
 
 async function main(userID, preferences) {
   await getUserPreferences(userID);
   await updateUserPreferences(userID, preferences);
-  await updateUserPreferences(userID, lessPreferences);
+  // await updateUserPreferences(userID, lessPreferences);
   // bad requests
   await getUserPreferences(badUserID);
   await updateUserPreferences(badUserID, preferences);
