@@ -140,6 +140,10 @@ app.put('/api/preferences/:id', async (req, res) => {
       preferences.location = coordinates;
     }
 
+    if (preferences.city === '' || preferences.state === '') {
+      preferences.location = null;
+    }
+
     await collection.updateOne({ _id: userID }, { $set: preferences });
     res.json({ message: 'Preferences updated' });
   } catch (e) {
