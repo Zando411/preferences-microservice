@@ -7,6 +7,7 @@ const axios = require('axios');
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL
 
 app.use(cors());
 app.use(express.json());
@@ -61,7 +62,7 @@ async function getCoordinates(city, state) {
 
 async function checkUser(email) {
   try {
-    const response = await axios.post(`http://localhost:3456/api/checkUser`, {
+    const response = await axios.post(`${AUTH_SERVICE_URL}/api/checkUser`, {
       email,
     });
     console.log(`User check for ${email}:`, response.data.message);
